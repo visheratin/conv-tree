@@ -80,9 +80,6 @@ func NewConvTree(topLeft Point, bottomRight Point, minXLength float64, minYLengt
 	initYSize = bottomRight.Y - topLeft.Y
 	if tree.checkSplit() {
 		tree.split()
-	} else {
-		tree.getStats()
-		tree.getBaseline()
 	}
 	return tree, nil
 }
@@ -176,9 +173,6 @@ func (tree *ConvTree) split() {
 	tree.ChildTopLeft.Points = tree.filterSplitPoints(tree.ChildTopLeft.TopLeft, tree.ChildTopLeft.BottomRight)
 	if tree.ChildTopLeft.checkSplit() {
 		tree.ChildTopLeft.split()
-	} else {
-		tree.ChildTopLeft.getStats()
-		tree.ChildTopLeft.Stats.BaselineTags = tree.Stats.BaselineTags
 	}
 
 	id, _ = uuid.NewV4()
@@ -205,9 +199,6 @@ func (tree *ConvTree) split() {
 	tree.ChildTopRight.Points = tree.filterSplitPoints(tree.ChildTopRight.TopLeft, tree.ChildTopRight.BottomRight)
 	if tree.ChildTopRight.checkSplit() {
 		tree.ChildTopRight.split()
-	} else {
-		tree.ChildTopRight.getStats()
-		tree.ChildTopRight.Stats.BaselineTags = tree.Stats.BaselineTags
 	}
 
 	id, _ = uuid.NewV4()
@@ -234,9 +225,6 @@ func (tree *ConvTree) split() {
 	tree.ChildBottomLeft.Points = tree.filterSplitPoints(tree.ChildBottomLeft.TopLeft, tree.ChildBottomLeft.BottomRight)
 	if tree.ChildBottomLeft.checkSplit() {
 		tree.ChildBottomLeft.split()
-	} else {
-		tree.ChildBottomLeft.getStats()
-		tree.ChildBottomLeft.Stats.BaselineTags = tree.Stats.BaselineTags
 	}
 
 	id, _ = uuid.NewV4()
@@ -260,9 +248,6 @@ func (tree *ConvTree) split() {
 	tree.ChildBottomRight.Points = tree.filterSplitPoints(tree.ChildBottomRight.TopLeft, tree.ChildBottomRight.BottomRight)
 	if tree.ChildBottomRight.checkSplit() {
 		tree.ChildBottomRight.split()
-	} else {
-		tree.ChildBottomRight.getStats()
-		tree.ChildBottomRight.Stats.BaselineTags = tree.Stats.BaselineTags
 	}
 
 	tree.IsLeaf = false
@@ -397,62 +382,14 @@ func (tree *ConvTree) Insert(point Point, allowSplit bool) {
 		if allowSplit {
 			if tree.checkSplit() {
 				tree.split()
-			} else {
-				tree.getStats()
-				tree.getBaseline()
 			}
 		}
 	}
-}
-
-func (tree *ConvTree) getBaseline() {
-	tagValues := map[string]int{}
-	for _, item := range tree.Points {
-		if item.Content != nil {
-			itemTags := map[string]bool{}
-			tags := item.Content.([]string)
-			for _, tag := range tags {
-				if _, ok := itemTags[tag]; !ok {
-					itemTags[tag] = true
-				}
-			}
-			for tag := range itemTags {
-				if _, ok := tagValues[tag]; !ok {
-					tagValues[tag] = 0
-				}
-				tagValues[tag]++
-			}
-		}
-	}
-	if len(tagValues) > 0 {
-		filteredTags := filterTags(tagValues)
-		tree.Stats.BaselineTags = filteredTags
-	}
-}
-
-func filterTags(tags map[string]int) []string {
-	numbers := make([]float64, len(tags))
-	i := 0
-	for _, v := range tags {
-		numbers[i] = float64(v)
-		i++
-	}
-	avg := stat.Mean(numbers, nil)
-	splitValue := int(avg)
-	result := []string{}
-	for k, v := range tags {
-		if v > splitValue {
-			result = append(result, k)
-		}
-	}
-	return result
 }
 
 func (tree *ConvTree) Check() {
 	if tree.checkSplit() {
 		tree.split()
-	} else {
-		tree.getStats()
 	}
 }
 
@@ -469,37 +406,6 @@ func (tree *ConvTree) Clear() {
 	}
 	if tree.ChildTopRight != nil {
 		tree.ChildTopRight.Clear()
-	}
-}
-
-func (tree *ConvTree) getStats() {
-	if len(tree.Points) == 0 {
-		return
-	}
-	tree.Stats = CellStats{}
-	for _, point := range tree.Points {
-		tree.Stats.PointsNumber += point.Weight
-	}
-	var xTotal float64
-	var yTotal float64
-	var totalDistance float64
-	for idx1, p := range tree.Points {
-		xTotal += p.X
-		yTotal += p.Y
-		for idx2, p2 := range tree.Points {
-			if idx1 == idx2 {
-				continue
-			}
-			dist := math.Abs(p.X-p2.X) + math.Abs(p.Y-p2.Y)
-			totalDistance += dist
-		}
-	}
-	tree.Stats.CenterPoint = Point{
-		X: xTotal / float64(tree.Stats.PointsNumber),
-		Y: yTotal / float64(tree.Stats.PointsNumber),
-	}
-	if tree.Stats.PointsNumber > 1 {
-		tree.Stats.AvgDistance = totalDistance / (math.Pow(float64(tree.Stats.PointsNumber), 2) - float64(tree.Stats.PointsNumber))
 	}
 }
 
