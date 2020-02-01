@@ -3,18 +3,8 @@ package convtree
 import (
 	"errors"
 	"fmt"
-	"image/color"
+	"github.com/google/uuid"
 	"math"
-	"os"
-	"strconv"
-
-	"github.com/gonum/stat"
-	"github.com/satori/go.uuid"
-
-	"gonum.org/v1/plot/plotter"
-	"gonum.org/v1/plot/vg"
-
-	"gonum.org/v1/plot"
 )
 
 var initXSize float64
@@ -51,7 +41,7 @@ func NewConvTree(topLeft Point, bottomRight Point, minXLength float64, minYLengt
 		err := errors.New("Y of top left point is larger or equal to Y of bottom right point")
 		return ConvTree{}, err
 	}
-	id, _ := uuid.NewV4()
+	id := uuid.New().String()
 	if !checkKernel(kernel) {
 		kernel = [][]float64{
 			[]float64{0.5, 0.5, 0.5},
@@ -61,7 +51,7 @@ func NewConvTree(topLeft Point, bottomRight Point, minXLength float64, minYLengt
 	}
 	tree := ConvTree{
 		IsLeaf:      true,
-		ID:          id.String(),
+		ID:          id,
 		MaxPoints:   maxPoints,
 		GridSize:    gridSize,
 		ConvNum:     convNumber,
@@ -152,9 +142,9 @@ func (tree *ConvTree) split() {
 	if tree.BottomRight.Y-yBottom < tree.MinYLength {
 		yBottom = tree.BottomRight.Y - tree.MinYLength
 	}
-	id, _ := uuid.NewV4()
+	id := uuid.New().String()
 	tree.ChildTopLeft = &ConvTree{
-		ID:      id.String(),
+		ID:      id,
 		TopLeft: tree.TopLeft,
 		BottomRight: Point{
 			X: xRight,
@@ -175,9 +165,9 @@ func (tree *ConvTree) split() {
 		tree.ChildTopLeft.split()
 	}
 
-	id, _ = uuid.NewV4()
+	id = uuid.New().String()
 	tree.ChildTopRight = &ConvTree{
-		ID: id.String(),
+		ID: id,
 		TopLeft: Point{
 			X: xRight,
 			Y: tree.TopLeft.Y,
@@ -201,9 +191,9 @@ func (tree *ConvTree) split() {
 		tree.ChildTopRight.split()
 	}
 
-	id, _ = uuid.NewV4()
+	id = uuid.New().String()
 	tree.ChildBottomLeft = &ConvTree{
-		ID: id.String(),
+		ID: id,
 		TopLeft: Point{
 			X: tree.TopLeft.X,
 			Y: yBottom,
@@ -227,9 +217,9 @@ func (tree *ConvTree) split() {
 		tree.ChildBottomLeft.split()
 	}
 
-	id, _ = uuid.NewV4()
+	id = uuid.New().String()
 	tree.ChildBottomRight = &ConvTree{
-		ID: id.String(),
+		ID: id,
 		TopLeft: Point{
 			X: xRight,
 			Y: yBottom,
@@ -339,7 +329,7 @@ func getSplitPoint(grid [][]float64) (int, int) {
 		if y != 0 {
 			splitY = y
 		}
-		splitValue = stat.Mean(vals, nil) * threshold
+		splitValue = mean(vals) * threshold
 		counter++
 	}
 	if splitX > maxX {
@@ -353,6 +343,14 @@ func getSplitPoint(grid [][]float64) (int, int) {
 		splitY--
 	}
 	return splitX, splitY
+}
+
+func mean(in []float64) float64 {
+	sum := 0.0
+	for _, v := range in {
+		sum += v
+	}
+	return sum / float64(len(in))
 }
 
 func (tree *ConvTree) Insert(point Point, allowSplit bool) {
@@ -406,117 +404,6 @@ func (tree *ConvTree) Clear() {
 	}
 	if tree.ChildTopRight != nil {
 		tree.ChildTopRight.Clear()
-	}
-}
-
-func (tree ConvTree) Plot(filepath string, max int) error {
-	p, err := tree.makePlot(&plot.Plot{}, max)
-	if err != nil {
-		return err
-	}
-	return p.Save(40*vg.Inch, 40*vg.Inch, filepath)
-}
-
-func (tree ConvTree) makePlot(p *plot.Plot, max int) (*plot.Plot, error) {
-	if p.Title.Text == "" {
-		var err error
-		p, err = plot.New()
-		if err != nil {
-			return nil, err
-		}
-		p.X.Min = tree.TopLeft.X
-		p.X.Max = tree.BottomRight.X
-		p.Y.Min = tree.TopLeft.Y
-		p.Y.Max = tree.BottomRight.Y
-		p.Title.Text = "Plot"
-	}
-	lines := make(plotter.XYs, 5)
-	lines[0].X = tree.TopLeft.X
-	lines[0].Y = tree.TopLeft.Y
-	lines[1].X = tree.BottomRight.X
-	lines[1].Y = tree.TopLeft.Y
-	lines[2].X = tree.BottomRight.X
-	lines[2].Y = tree.BottomRight.Y
-	lines[3].X = tree.TopLeft.X
-	lines[3].Y = tree.BottomRight.Y
-	lines[4].X = tree.TopLeft.X
-	lines[4].Y = tree.TopLeft.Y
-	l, err := plotter.NewLine(lines)
-	if err != nil {
-		return nil, err
-	}
-	p.Add(l)
-	if !tree.IsLeaf {
-		p, err := tree.ChildTopLeft.makePlot(p, max)
-		if err != nil {
-			return nil, err
-		}
-		p, err = tree.ChildTopRight.makePlot(p, max)
-		if err != nil {
-			return nil, err
-		}
-		p, err = tree.ChildBottomLeft.makePlot(p, max)
-		if err != nil {
-			return nil, err
-		}
-		p, err = tree.ChildBottomRight.makePlot(p, max)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		points := make(plotter.XYs, len(tree.Points))
-		for i := 0; i < len(tree.Points); i++ {
-			points[i].X = tree.Points[i].X
-			points[i].Y = tree.Points[i].Y
-		}
-		s, err := plotter.NewScatter(points)
-		s.Color = color.RGBA{R: 255, B: 128, A: 255}
-		if err != nil {
-			return nil, err
-		}
-		p.Add(s)
-	}
-	return p, nil
-}
-
-func plotGrid(grid [][]float64, depth int, id string) {
-	os.Remove("./grid-plots")
-	p, err := plot.New()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	p.X.Min = 0
-	p.X.Max = float64(len(grid) + 1)
-	p.Y.Min = 0
-	p.Y.Max = float64(len(grid[0]) + 1)
-	for i := 0; i < len(grid); i++ {
-		for j := 0; j < len(grid[0]); j++ {
-			lines := make(plotter.XYs, 5)
-			lines[0].X = float64(i)
-			lines[0].Y = float64(j)
-			lines[1].X = float64(i + 1)
-			lines[1].Y = float64(j)
-			lines[2].X = float64(i + 1)
-			lines[2].Y = float64(j + 1)
-			lines[3].X = float64(i)
-			lines[3].Y = float64(j + 1)
-			lines[4].X = float64(i)
-			lines[4].Y = float64(j)
-			pol, err := plotter.NewPolygon(lines)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			pol.Color = color.RGBA{A: uint8(255.0 * grid[i][j])}
-			p.Add(pol)
-		}
-	}
-	os.MkdirAll("./grid-plots", 0777)
-	filepath := "./grid-plots/" + id + "-conv-" + strconv.Itoa(depth) + ".png"
-	if err := p.Save(20*vg.Inch, 20*vg.Inch, filepath); err != nil {
-		fmt.Println(err)
-		return
 	}
 }
 
@@ -609,17 +496,6 @@ func convolve(grid [][]float64, kernel [][]float64, stride, padding int) ([][]fl
 		}
 	}
 	return result, nil
-}
-
-func printGrid(grid [][]float64) {
-	for i := 0; i < len(grid); i++ {
-		for j := 0; j < len(grid); j++ {
-			fmt.Print(grid[i][j])
-			fmt.Print("\t")
-		}
-		fmt.Print("\n")
-	}
-	fmt.Println("-----")
 }
 
 func normalizeGrid(grid [][]float64) [][]float64 {
