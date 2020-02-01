@@ -3,13 +3,7 @@ package convtree
 import (
 	"errors"
 	"fmt"
-	"image/color"
-
-	uuid "github.com/satori/go.uuid"
-	"gonum.org/v1/plot/plotter"
-	"gonum.org/v1/plot/vg"
-
-	"gonum.org/v1/plot"
+	uuid "github.com/google/uuid"
 )
 
 type QuadTree struct {
@@ -40,9 +34,9 @@ func NewQuadTree(topLeft Point, bottomRight Point, minXLength float64, minYLengt
 		err := errors.New("Y of top left point is larger or equal to Y of bottom right point")
 		return QuadTree{}, err
 	}
-	id, _ := uuid.NewV4()
+	id := uuid.New().String()
 	tree := QuadTree{
-		ID:          id.String(),
+		ID:          id,
 		maxPoints:   maxPoints,
 		maxDepth:    maxDepth,
 		Depth:       0,
@@ -108,79 +102,6 @@ func (tree QuadTree) Print(prefix string) {
 	}
 }
 
-func (tree QuadTree) Plot(filepath string, max int) error {
-	p, err := tree.makePlot(&plot.Plot{}, max)
-	if err != nil {
-		return err
-	}
-	if err := p.Save(40*vg.Inch, 40*vg.Inch, filepath); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (tree QuadTree) makePlot(p *plot.Plot, max int) (*plot.Plot, error) {
-	if p.Title.Text == "" {
-		var err error
-		p, err = plot.New()
-		if err != nil {
-			return nil, err
-		}
-		p.X.Min = tree.TopLeft.X
-		p.X.Max = tree.BottomRight.X
-		p.Y.Min = tree.TopLeft.Y
-		p.Y.Max = tree.BottomRight.Y
-		p.Title.Text = "Plot"
-	}
-	lines := make(plotter.XYs, 5)
-	lines[0].X = tree.TopLeft.X
-	lines[0].Y = tree.TopLeft.Y
-	lines[1].X = tree.BottomRight.X
-	lines[1].Y = tree.TopLeft.Y
-	lines[2].X = tree.BottomRight.X
-	lines[2].Y = tree.BottomRight.Y
-	lines[3].X = tree.TopLeft.X
-	lines[3].Y = tree.BottomRight.Y
-	lines[4].X = tree.TopLeft.X
-	lines[4].Y = tree.TopLeft.Y
-	l, err := plotter.NewLine(lines)
-	if err != nil {
-		return nil, err
-	}
-	p.Add(l)
-	if !tree.IsLeaf {
-		p, err := tree.ChildTopLeft.makePlot(p, max)
-		if err != nil {
-			return nil, err
-		}
-		p, err = tree.ChildTopRight.makePlot(p, max)
-		if err != nil {
-			return nil, err
-		}
-		p, err = tree.ChildBottomLeft.makePlot(p, max)
-		if err != nil {
-			return nil, err
-		}
-		p, err = tree.ChildBottomRight.makePlot(p, max)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		points := make(plotter.XYs, len(tree.Points))
-		for i := 0; i < len(tree.Points); i++ {
-			points[i].X = tree.Points[i].X
-			points[i].Y = tree.Points[i].Y
-		}
-		s, err := plotter.NewScatter(points)
-		s.Color = color.RGBA{R: 255, B: 128, A: 255}
-		if err != nil {
-			return nil, err
-		}
-		p.Add(s)
-	}
-	return p, nil
-}
-
 func (tree QuadTree) checkSplit() bool {
 	cond1 := (tree.BottomRight.X-tree.TopLeft.X) > 2*tree.minXLength && (tree.BottomRight.Y-tree.TopLeft.Y) > 2*tree.minYLength
 	total := 0
@@ -214,9 +135,9 @@ func (tree QuadTree) filterSplitPoints(topLeft, bottomRight Point) []Point {
 func (tree *QuadTree) split() {
 	xRight := tree.TopLeft.X + (tree.BottomRight.X-tree.TopLeft.X)/2.0
 	yBottom := tree.TopLeft.Y + (tree.BottomRight.Y-tree.TopLeft.Y)/2.0
-	id, _ := uuid.NewV4()
+	id := uuid.New().String()
 	tree.ChildTopLeft = &QuadTree{
-		ID:      id.String(),
+		ID:      id,
 		TopLeft: tree.TopLeft,
 		BottomRight: Point{
 			X: xRight,
@@ -235,9 +156,9 @@ func (tree *QuadTree) split() {
 		tree.ChildTopLeft.split()
 	}
 
-	id, _ = uuid.NewV4()
+	id = uuid.New().String()
 	tree.ChildTopRight = &QuadTree{
-		ID: id.String(),
+		ID: id,
 		TopLeft: Point{
 			X: xRight,
 			Y: tree.TopLeft.Y,
@@ -259,9 +180,9 @@ func (tree *QuadTree) split() {
 		tree.ChildTopRight.split()
 	}
 
-	id, _ = uuid.NewV4()
+	id = uuid.New().String()
 	tree.ChildBottomLeft = &QuadTree{
-		ID: id.String(),
+		ID: id,
 		TopLeft: Point{
 			X: tree.TopLeft.X,
 			Y: yBottom,
@@ -283,9 +204,9 @@ func (tree *QuadTree) split() {
 		tree.ChildBottomLeft.split()
 	}
 
-	id, _ = uuid.NewV4()
+	id = uuid.New().String()
 	tree.ChildBottomRight = &QuadTree{
-		ID: id.String(),
+		ID: id,
 		TopLeft: Point{
 			X: xRight,
 			Y: yBottom,

@@ -7,9 +7,6 @@ import (
 	"math"
 )
 
-var initXSize float64
-var initYSize float64
-
 type ConvTree struct {
 	ID               string
 	IsLeaf           bool
@@ -28,7 +25,6 @@ type ConvTree struct {
 	ChildTopRight    *ConvTree
 	ChildBottomLeft  *ConvTree
 	ChildBottomRight *ConvTree
-	Stats            CellStats
 }
 
 func NewConvTree(topLeft Point, bottomRight Point, minXLength float64, minYLength float64, maxPoints int, maxDepth int,
@@ -66,8 +62,6 @@ func NewConvTree(topLeft Point, bottomRight Point, minXLength float64, minYLengt
 	if initPoints != nil {
 		tree.Points = initPoints
 	}
-	initXSize = bottomRight.X - topLeft.X
-	initYSize = bottomRight.Y - topLeft.Y
 	if tree.checkSplit() {
 		tree.split()
 	}
