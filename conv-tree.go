@@ -33,8 +33,8 @@ func NewConvTree(topLeft Point, bottomRight Point, minXLength float64, minYLengt
 		err := errors.New("X of top left point is larger or equal to X of bottom right point")
 		return ConvTree{}, err
 	}
-	if topLeft.Y >= bottomRight.Y {
-		err := errors.New("Y of top left point is larger or equal to Y of bottom right point")
+	if topLeft.Y <= bottomRight.Y {
+		err := errors.New("Y of bottom right point is larger or equal to Y of top left point")
 		return ConvTree{}, err
 	}
 	id := uuid.New().String()
@@ -91,14 +91,14 @@ func (tree *ConvTree) split() {
 	xSize, ySize := tree.GridSize, tree.GridSize
 	grid := make([][]float64, xSize)
 	xStep := (tree.BottomRight.X - tree.TopLeft.X) / float64(xSize)
-	yStep := (tree.BottomRight.Y - tree.TopLeft.Y) / float64(ySize)
+	yStep := (tree.TopLeft.Y - tree.BottomRight.Y) / float64(ySize)
 	for i := 0; i < xSize; i++ {
 		grid[i] = make([]float64, ySize)
 		for j := 0; j < ySize; j++ {
 			xLeft := tree.TopLeft.X + float64(i)*xStep
 			xRight := tree.TopLeft.X + float64(i+1)*xStep
-			yTop := tree.TopLeft.Y + float64(j)*yStep
-			yBottom := tree.TopLeft.Y + float64(j+1)*yStep
+			yBottom := tree.BottomRight.Y + float64(j)*yStep
+			yTop := tree.BottomRight.Y + float64(j+1)*yStep
 			grid[i][j] = float64(tree.getNodeWeight(xLeft, xRight, yTop, yBottom))
 		}
 	}
@@ -129,12 +129,12 @@ func (tree *ConvTree) split() {
 	if tree.BottomRight.X-xRight < tree.MinXLength {
 		xRight = tree.BottomRight.X - tree.MinXLength
 	}
-	yBottom := tree.TopLeft.Y + yOffset
-	if yBottom-tree.TopLeft.Y < tree.MinYLength {
-		yBottom = tree.TopLeft.Y + tree.MinYLength
+	yBottom := tree.BottomRight.Y + yOffset
+	if yBottom-tree.BottomRight.Y < tree.MinYLength {
+		yBottom = tree.BottomRight.Y + tree.MinYLength
 	}
-	if tree.BottomRight.Y-yBottom < tree.MinYLength {
-		yBottom = tree.BottomRight.Y - tree.MinYLength
+	if tree.TopLeft.Y-yBottom < tree.MinYLength {
+		yBottom = tree.TopLeft.Y - tree.MinYLength
 	}
 	id := uuid.New().String()
 	tree.ChildTopLeft = &ConvTree{
@@ -414,7 +414,7 @@ func (tree ConvTree) checkSplit() bool {
 func (tree ConvTree) getNodeWeight(xLeft, xRight, yTop, yBottom float64) int {
 	total := 0
 	for _, point := range tree.Points {
-		if point.X >= xLeft && point.X <= xRight && point.Y >= yTop && point.Y <= yBottom {
+		if point.X >= xLeft && point.X <= xRight && point.Y >= yBottom && point.Y <= yTop {
 			total += point.Weight
 		}
 	}
@@ -424,7 +424,7 @@ func (tree ConvTree) getNodeWeight(xLeft, xRight, yTop, yBottom float64) int {
 func (tree ConvTree) filterSplitPoints(topLeft, bottomRight Point) []Point {
 	result := []Point{}
 	for _, point := range tree.Points {
-		if point.X >= topLeft.X && point.X <= bottomRight.X && point.Y >= topLeft.Y && point.Y <= bottomRight.Y {
+		if point.X >= topLeft.X && point.X <= bottomRight.X && point.Y >= bottomRight.Y && point.Y <= topLeft.Y {
 			result = append(result, point)
 		}
 	}
