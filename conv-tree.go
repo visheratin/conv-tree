@@ -402,7 +402,7 @@ func (tree *ConvTree) Clear() {
 }
 
 func (tree ConvTree) checkSplit() bool {
-	cond1 := (tree.BottomRight.X-tree.TopLeft.X) > 2*tree.MinXLength && (tree.BottomRight.Y-tree.TopLeft.Y) > 2*tree.MinYLength
+	cond1 := (tree.BottomRight.X-tree.TopLeft.X) > 2*tree.MinXLength && (tree.TopLeft.Y-tree.BottomRight.Y) > 2*tree.MinYLength
 	totalWeight := 0
 	for _, point := range tree.Points {
 		totalWeight += point.Weight
