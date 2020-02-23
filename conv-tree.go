@@ -350,22 +350,22 @@ func mean(in []float64) float64 {
 func (tree *ConvTree) Insert(point Point, allowSplit bool) {
 	if !tree.IsLeaf {
 		if point.X >= tree.ChildTopLeft.TopLeft.X && point.X <= tree.ChildTopLeft.BottomRight.X &&
-			point.Y >= tree.ChildTopLeft.TopLeft.Y && point.Y <= tree.ChildTopLeft.BottomRight.Y {
+			point.Y <= tree.ChildTopLeft.TopLeft.Y && point.Y >= tree.ChildTopLeft.BottomRight.Y {
 			tree.ChildTopLeft.Insert(point, allowSplit)
 			return
 		}
 		if point.X >= tree.ChildTopRight.TopLeft.X && point.X <= tree.ChildTopRight.BottomRight.X &&
-			point.Y >= tree.ChildTopRight.TopLeft.Y && point.Y <= tree.ChildTopRight.BottomRight.Y {
+			point.Y <= tree.ChildTopRight.TopLeft.Y && point.Y >= tree.ChildTopRight.BottomRight.Y {
 			tree.ChildTopRight.Insert(point, allowSplit)
 			return
 		}
 		if point.X >= tree.ChildBottomLeft.TopLeft.X && point.X <= tree.ChildBottomLeft.BottomRight.X &&
-			point.Y >= tree.ChildBottomLeft.TopLeft.Y && point.Y <= tree.ChildBottomLeft.BottomRight.Y {
+			point.Y <= tree.ChildBottomLeft.TopLeft.Y && point.Y >= tree.ChildBottomLeft.BottomRight.Y {
 			tree.ChildBottomLeft.Insert(point, allowSplit)
 			return
 		}
 		if point.X >= tree.ChildBottomRight.TopLeft.X && point.X <= tree.ChildBottomRight.BottomRight.X &&
-			point.Y >= tree.ChildBottomRight.TopLeft.Y && point.Y <= tree.ChildBottomRight.BottomRight.Y {
+			point.Y <= tree.ChildBottomRight.TopLeft.Y && point.Y >= tree.ChildBottomRight.BottomRight.Y {
 			tree.ChildBottomRight.Insert(point, allowSplit)
 			return
 		}
