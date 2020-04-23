@@ -3,8 +3,9 @@ package convtree
 import (
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"math"
+
+	"github.com/google/uuid"
 )
 
 type ConvTree struct {
@@ -25,6 +26,7 @@ type ConvTree struct {
 	ChildTopRight    *ConvTree
 	ChildBottomLeft  *ConvTree
 	ChildBottomRight *ConvTree
+	BaselineTags     []string
 }
 
 func NewConvTree(topLeft Point, bottomRight Point, minXLength float64, minYLength float64, maxPoints int, maxDepth int,
@@ -64,6 +66,8 @@ func NewConvTree(topLeft Point, bottomRight Point, minXLength float64, minYLengt
 	}
 	if tree.checkSplit() {
 		tree.split()
+	} else {
+		tree.getBaseline()
 	}
 	return tree, nil
 }
@@ -157,6 +161,9 @@ func (tree *ConvTree) split() {
 	tree.ChildTopLeft.Points = tree.filterSplitPoints(tree.ChildTopLeft.TopLeft, tree.ChildTopLeft.BottomRight)
 	if tree.ChildTopLeft.checkSplit() {
 		tree.ChildTopLeft.split()
+	} else {
+		tree.ChildTopLeft.BaselineTags = tree.BaselineTags
+		tree.ChildTopLeft.getBaseline()
 	}
 
 	id = uuid.New().String()
@@ -183,6 +190,9 @@ func (tree *ConvTree) split() {
 	tree.ChildTopRight.Points = tree.filterSplitPoints(tree.ChildTopRight.TopLeft, tree.ChildTopRight.BottomRight)
 	if tree.ChildTopRight.checkSplit() {
 		tree.ChildTopRight.split()
+	} else {
+		tree.ChildTopRight.BaselineTags = tree.BaselineTags
+		tree.ChildTopRight.getBaseline()
 	}
 
 	id = uuid.New().String()
@@ -209,6 +219,9 @@ func (tree *ConvTree) split() {
 	tree.ChildBottomLeft.Points = tree.filterSplitPoints(tree.ChildBottomLeft.TopLeft, tree.ChildBottomLeft.BottomRight)
 	if tree.ChildBottomLeft.checkSplit() {
 		tree.ChildBottomLeft.split()
+	} else {
+		tree.ChildBottomLeft.BaselineTags = tree.BaselineTags
+		tree.ChildBottomLeft.getBaseline()
 	}
 
 	id = uuid.New().String()
@@ -232,10 +245,58 @@ func (tree *ConvTree) split() {
 	tree.ChildBottomRight.Points = tree.filterSplitPoints(tree.ChildBottomRight.TopLeft, tree.ChildBottomRight.BottomRight)
 	if tree.ChildBottomRight.checkSplit() {
 		tree.ChildBottomRight.split()
+	} else {
+		tree.ChildBottomRight.BaselineTags = tree.BaselineTags
+		tree.ChildBottomRight.getBaseline()
 	}
 
 	tree.IsLeaf = false
 	tree.Points = nil
+}
+
+func (tree *ConvTree) getBaseline() {
+	tagValues := map[string]int{}
+	for _, item := range tree.Points {
+		if item.Content != nil {
+			if tags, ok := item.Content.([]string); ok {
+				itemTags := map[string]bool{}
+				for _, tag := range tags {
+					if _, ok := itemTags[tag]; !ok {
+						itemTags[tag] = true
+					}
+				}
+				for tag := range itemTags {
+					if _, ok := tagValues[tag]; !ok {
+						tagValues[tag] = 0
+					}
+					tagValues[tag]++
+				}
+
+			}
+		}
+	}
+	if len(tagValues) > 0 {
+		filteredTags := filterTags(tagValues)
+		tree.BaselineTags = filteredTags
+	}
+}
+
+func filterTags(tags map[string]int) []string {
+	numbers := make([]float64, len(tags))
+	i := 0
+	for _, v := range tags {
+		numbers[i] = float64(v)
+		i++
+	}
+	avg := mean(numbers)
+	splitValue := int(avg)
+	result := []string{}
+	for k, v := range tags {
+		if v > splitValue {
+			result = append(result, k)
+		}
+	}
+	return result
 }
 
 func getSplitPoint(grid [][]float64) (int, int) {
@@ -401,7 +462,7 @@ func (tree *ConvTree) Clear() {
 	}
 }
 
-func (tree ConvTree) checkSplit() bool {
+func (tree *ConvTree) checkSplit() bool {
 	cond1 := (tree.BottomRight.X-tree.TopLeft.X) > 2*tree.MinXLength && (tree.TopLeft.Y-tree.BottomRight.Y) > 2*tree.MinYLength
 	totalWeight := 0
 	for _, point := range tree.Points {
@@ -411,7 +472,7 @@ func (tree ConvTree) checkSplit() bool {
 	return cond1 && cond2
 }
 
-func (tree ConvTree) getNodeWeight(xLeft, xRight, yTop, yBottom float64) int {
+func (tree *ConvTree) getNodeWeight(xLeft, xRight, yTop, yBottom float64) int {
 	total := 0
 	for _, point := range tree.Points {
 		if point.X >= xLeft && point.X <= xRight && point.Y >= yBottom && point.Y <= yTop {
@@ -421,7 +482,7 @@ func (tree ConvTree) getNodeWeight(xLeft, xRight, yTop, yBottom float64) int {
 	return total
 }
 
-func (tree ConvTree) filterSplitPoints(topLeft, bottomRight Point) []Point {
+func (tree *ConvTree) filterSplitPoints(topLeft, bottomRight Point) []Point {
 	result := []Point{}
 	for _, point := range tree.Points {
 		if point.X >= topLeft.X && point.X <= bottomRight.X && point.Y >= bottomRight.Y && point.Y <= topLeft.Y {
